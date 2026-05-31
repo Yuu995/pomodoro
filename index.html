@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pomodoro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500&family=Spline+Sans:wght@400;500&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="mode-work on-tasks">
+  <div class="paper">
+    <!-- 报头 -->
+    <header class="masthead">
+      <div class="kicker">Pomodoro <span class="sep">·</span> <span id="tagline">专注计时</span></div>
+      <button class="theme-btn" id="themeBtn" title="切换主题:跟随系统 / 浅色 / 深色" aria-label="主题">◐</button>
+      <button class="settings-btn" id="settingsBtn" title="设置" aria-label="设置">
+        <span></span><span></span><span></span>
+      </button>
+    </header>
+
+    <!-- 主 Tab:计时 / 任务 -->
+    <nav class="main-tabs">
+      <button class="main-tab active" data-view="tasks">ToDo<span class="badge" id="taskBadge"></span></button>
+      <button class="main-tab" data-view="timer">计时</button>
+    </nav>
+
+    <!-- 视图:计时 -->
+    <div id="viewTimer" class="view hidden">
+      <nav class="modes">
+        <button class="mode-btn active" data-mode="work">专注</button>
+        <button class="mode-btn" data-mode="short">短休</button>
+        <button class="mode-btn" data-mode="long">长休</button>
+      </nav>
+
+      <main class="dial-section">
+        <div class="dial">
+          <svg class="ring" viewBox="0 0 240 240">
+            <circle class="ring-bg" cx="120" cy="120" r="108" />
+            <circle class="ring-fg" id="ringFg" cx="120" cy="120" r="108" />
+          </svg>
+          <div class="time-center">
+            <div class="session" id="pomoNo">01</div>
+            <div class="time" id="timeDisplay">25:00</div>
+            <div class="round-label" id="roundLabel">第 1 个番茄</div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="ctrl-btn ghost" id="resetBtn" title="重置" aria-label="重置">↺</button>
+          <button class="ctrl-btn play" id="startBtn">开始</button>
+          <button class="ctrl-btn ghost" id="skipBtn" title="跳过" aria-label="跳过">↦</button>
+        </div>
+      </main>
+
+      <section class="stats">
+        <div class="stat"><div class="stat-num" id="todayCount">0</div><div class="stat-label">今日番茄</div></div>
+        <div class="stat"><div class="stat-num" id="todayFocus">0</div><div class="stat-label">专注分钟</div></div>
+        <div class="stat"><div class="stat-num" id="totalCount">0</div><div class="stat-label">累计番茄</div></div>
+      </section>
+
+      <section class="week">
+        <div class="week-title">最近七日</div>
+        <div class="week-bars" id="weekBars"></div>
+      </section>
+    </div>
+
+    <!-- 视图:ToDo(左侧任务栏 + 右侧内容)-->
+    <div id="viewTasks" class="view">
+      <div class="todo-layout">
+        <aside class="sidebar">
+          <button class="side-collapse" id="sideCollapse" title="收起任务栏" aria-label="收起任务栏">«</button>
+          <button class="side-item active" data-filter="all">全部<span class="side-cnt" id="cntAll"></span></button>
+          <button class="side-item" data-filter="done">已完成<span class="side-cnt" id="cntDone"></span></button>
+          <button class="side-item" data-filter="trash">回收站<span class="side-cnt" id="cntTrash"></span></button>
+          <div class="side-foot">回收站超过 14 天自动清除</div>
+        </aside>
+        <div class="todo-main">
+          <button class="side-expand" id="sideExpand" title="展开任务栏" aria-label="展开任务栏">☰</button>
+          <div class="task-add" id="taskAdd">
+            <button class="status-tag" id="statusTag" data-prio="high">今天做完</button>
+            <input type="text" id="taskInput" placeholder="添加待办,回车保存…" maxlength="80" />
+          </div>
+          <div class="task-list" id="taskList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 设置 -->
+  <div class="overlay hidden" id="settingsOverlay">
+    <div class="panel">
+      <h2>设置</h2>
+      <label class="field"><span>专注时长 · 分钟</span><input type="number" id="workInput" min="1" max="180" value="25" /></label>
+      <label class="field"><span>短休息 · 分钟</span><input type="number" id="shortInput" min="1" max="60" value="5" /></label>
+      <label class="field"><span>长休息 · 分钟</span><input type="number" id="longInput" min="1" max="120" value="15" /></label>
+      <label class="field"><span>长休间隔 · 番茄数</span><input type="number" id="intervalInput" min="2" max="12" value="4" /></label>
+      <label class="field row"><span>声音提醒</span><input type="checkbox" id="soundInput" checked /></label>
+      <label class="field row"><span>自动开始下一阶段</span><input type="checkbox" id="autoInput" /></label>
+      <div class="panel-actions">
+        <button class="ctrl-btn ghost wide" id="resetStatsBtn">清空统计</button>
+        <button class="ctrl-btn play wide" id="saveSettingsBtn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="tasks.js"></script>
+  <script src="confetti.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

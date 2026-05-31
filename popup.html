@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>快捷计时</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500&family=Spline+Sans:wght@400;500&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body class="mode-work on-tasks">
+  <div class="wrap">
+    <div class="card">
+      <!-- 顶部 Tab:番茄 / 待办 -->
+      <nav class="top-tabs">
+        <button class="top-tab active" data-pp="tasks">ToDo<span class="badge" id="ppBadge"></span></button>
+        <button class="top-tab" data-pp="timer">番茄</button>
+        <button class="expand" id="openMain" title="打开主窗口" aria-label="打开主窗口">↗</button>
+      </nav>
+
+      <!-- 视图:番茄计时 -->
+      <div id="ppTimer" class="pp-view hidden">
+        <nav class="modes">
+          <button class="mode-btn active" data-mode="work">专注</button>
+          <button class="mode-btn" data-mode="short">短休</button>
+          <button class="mode-btn" data-mode="long">长休</button>
+        </nav>
+        <div class="timer">
+          <div class="time" id="timeDisplay">25:00</div>
+          <div class="round-label" id="roundLabel">第 1 个番茄</div>
+          <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+        </div>
+        <div class="controls">
+          <button class="ctrl-btn ghost" id="resetBtn" title="重置" aria-label="重置">↺</button>
+          <button class="ctrl-btn play" id="startBtn">开始</button>
+          <button class="ctrl-btn ghost" id="skipBtn" title="跳过" aria-label="跳过">↦</button>
+        </div>
+      </div>
+
+      <!-- 视图:待办 -->
+      <div id="ppTasks" class="pp-view">
+        <div class="pp-task-add">
+          <button class="status-tag" id="ppStatusTag" data-prio="high">今天做完</button>
+          <input type="text" id="ppTaskInput" placeholder="回车保存…" maxlength="80" />
+        </div>
+        <div class="pp-task-list" id="ppTaskList"></div>
+      </div>
+    </div>
+  </div>
+  <script src="tasks.js"></script>
+  <script src="confetti.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
