@@ -91,18 +91,27 @@ function setTaskPriority(id, key) {
   saveTasks(list);
   return list;
 }
+// 把 draggedId 移到 targetId 的前 / 后,并跟随目标的优先级(支持跨组拖拽排序)
+function moveTask(draggedId, targetId, before) {
+  const list = loadTasks();
+  const from = list.findIndex(t => t.id === draggedId);
+  if (from < 0 || draggedId === targetId) return list;
+  const [item] = list.splice(from, 1);
+  let to = list.findIndex(t => t.id === targetId);
+  if (to < 0) { list.push(item); saveTasks(list); return list; }
+  item.priority = list[to].priority;
+  if (!before) to += 1;
+  list.splice(to, 0, item);
+  saveTasks(list);
+  return list;
+}
 function clearDoneTasks() {
   const list = loadTasks().filter(i => !i.done);
   saveTasks(list);
   return list;
 }
 
-// 排序:未完成在前,再按优先级,再按创建时间
+// 排序:完成的沉底;其余保持数组(手动拖拽)顺序(Array.sort 稳定)
 function sortTasks(list) {
-  return list.slice().sort((a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1;
-    if (PRIORITY_ORDER[a.priority] !== PRIORITY_ORDER[b.priority])
-      return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
-    return a.createdAt - b.createdAt;
-  });
+  return list.slice().sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
 }

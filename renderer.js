@@ -462,10 +462,26 @@ function taskRow(t) {
   const p = PRIORITY_MAP[t.priority] || PRIORITIES[0];
   const row = document.createElement('div');
   row.className = 'task-row' + (t.done ? ' done' : '');
-  row.draggable = currentFilter === 'all'; // 仅「全部」可拖拽改优先级
+  row.draggable = currentFilter === 'all'; // 仅「全部」可拖拽排序
   if (row.draggable) {
     row.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', t.id); e.dataTransfer.effectAllowed = 'move'; row.classList.add('dragging'); });
     row.addEventListener('dragend', () => row.classList.remove('dragging'));
+    row.addEventListener('dragover', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const rect = row.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height / 2;
+      row.classList.toggle('drag-over-top', before);
+      row.classList.toggle('drag-over-bottom', !before);
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over-top', 'drag-over-bottom'));
+    row.addEventListener('drop', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      row.classList.remove('drag-over-top', 'drag-over-bottom');
+      const id = e.dataTransfer.getData('text/plain');
+      const rect = row.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height / 2;
+      if (id && id !== t.id) { moveTask(id, t.id, before); renderTasks(); }
+    });
   }
   const box = document.createElement('button');
   box.className = 'check';

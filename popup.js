@@ -213,7 +213,12 @@ ppTaskInput.addEventListener('keydown', (e) => {
 });
 
 function renderPpTasks() {
-  const list = loadTasks();
+  purgeOldTrash(); // 清理回收站中超 14 天的
+  // 悬浮窗:排除回收站;已完成的只保留「当天完成」的
+  const today = todayKey();
+  const list = loadTasks().filter(t =>
+    !t.deleted && (!t.done || (t.completedAt && todayKey(new Date(t.completedAt)) === today))
+  );
   const active = list.filter(t => !t.done).length;
   ppBadge.textContent = active || '';
   ppBadge.style.display = active ? '' : 'none';
@@ -229,6 +234,7 @@ function renderPpTasks() {
   }
   PRIORITIES.forEach(p => {
     const items = sortTasks(list.filter(t => t.priority === p.key));
+    if (!items.length) return; // 该标签下没有任务,不显示这个标签组
     const group = document.createElement('div');
     group.className = 'pp-group';
     const head = document.createElement('div');
@@ -236,13 +242,7 @@ function renderPpTasks() {
     head.innerHTML = `<span class="ghead" style="color:${p.color}">${p.label}</span>` +
       `<span class="gcnt">${items.filter(i => !i.done).length || ''}</span>`;
     group.appendChild(head);
-    if (!items.length) {
-      const ph = document.createElement('div');
-      ph.className = 'group-empty'; ph.textContent = '拖到这里';
-      group.appendChild(ph);
-    } else {
-      items.forEach(t => group.appendChild(ppRow(t, p)));
-    }
+    items.forEach(t => group.appendChild(ppRow(t, p)));
     group.addEventListener('dragover', (e) => { e.preventDefault(); group.classList.add('drop-hover'); });
     group.addEventListener('dragleave', (e) => { if (!group.contains(e.relatedTarget)) group.classList.remove('drop-hover'); });
     group.addEventListener('drop', (e) => {
@@ -266,6 +266,22 @@ function ppRow(t, p) {
     row.classList.add('dragging');
   });
   row.addEventListener('dragend', () => row.classList.remove('dragging'));
+  row.addEventListener('dragover', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const rect = row.getBoundingClientRect();
+    const before = (e.clientY - rect.top) < rect.height / 2;
+    row.classList.toggle('drag-over-top', before);
+    row.classList.toggle('drag-over-bottom', !before);
+  });
+  row.addEventListener('dragleave', () => row.classList.remove('drag-over-top', 'drag-over-bottom'));
+  row.addEventListener('drop', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    row.classList.remove('drag-over-top', 'drag-over-bottom');
+    const id = e.dataTransfer.getData('text/plain');
+    const rect = row.getBoundingClientRect();
+    const before = (e.clientY - rect.top) < rect.height / 2;
+    if (id && id !== t.id) { moveTask(id, t.id, before); renderPpTasks(); }
+  });
   const box = document.createElement('button');
   box.className = 'check';
   box.style.borderColor = p.color;
