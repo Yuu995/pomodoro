@@ -368,7 +368,19 @@ body.on-tasks .paper { max-width: 860px; }
   cursor: pointer; color: #fff; font-size: 10px; line-height: 1;
   display: flex; align-items: center; justify-content: center; transition: all .15s;
 }
-.task-text { flex: 1; font-family: var(--sans); font-size: 13px; color: var(--ink); word-break: break-word; }
+.task-text { flex: 1; font-family: var(--sans); font-size: 13px; color: var(--ink); line-height: 1.45; word-break: break-word; }
+.task-text code { font-family: ui-monospace, "SF Mono", monospace; font-size: .9em; background: var(--hair); padding: 1px 5px; border-radius: 4px; }
+.task-text a { color: var(--accent); text-decoration: underline; }
+.task-text del { opacity: .55; }
+.task-text .md-list { margin: 3px 0; padding-left: 1.4em; }
+.task-text .md-list li { margin: 2px 0; }
+.task-text .md-line + .md-line { margin-top: 2px; }
+.task-edit {
+  flex: 1; min-width: 0; box-sizing: border-box;
+  font-family: var(--sans); font-size: 13px; line-height: 1.45; color: var(--ink);
+  background: var(--glass-soft); border: 1px solid var(--accent); border-radius: 8px;
+  padding: 5px 8px; resize: none; outline: none; overflow: hidden;
+}
 .task-row.done .task-text { color: var(--ink-soft); text-decoration: line-through; }
 .task-del {
   flex: none; width: 22px; height: 22px; border: none; background: transparent;

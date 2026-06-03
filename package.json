@@ -1,6 +1,6 @@
 {
   "name": "tomato-clock",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "一个简洁的桌面番茄钟",
   "main": "main.js",
   "scripts": {
@@ -23,6 +23,7 @@
       "renderer.js",
       "styles.css",
       "tasks.js",
+      "markdown.js",
       "confetti.js",
       "popup.html",
       "popup.js",

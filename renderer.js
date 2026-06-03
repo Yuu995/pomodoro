@@ -494,7 +494,9 @@ function taskRow(t) {
     renderTasks();
   });
   const span = document.createElement('span');
-  span.className = 'task-text'; span.textContent = t.text;
+  span.className = 'task-text'; span.innerHTML = renderMarkdown(t.text);
+  span.title = '双击编辑';
+  span.addEventListener('dblclick', () => beginTaskEdit(row, span, t, renderTasks));
   row.append(box, span);
   if (t.done && t.completedAt) {
     const time = document.createElement('span'); time.className = 'task-time'; time.textContent = formatMonthDay(t.completedAt);

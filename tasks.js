@@ -91,6 +91,13 @@ function setTaskPriority(id, key) {
   saveTasks(list);
   return list;
 }
+function updateTaskText(id, text) {
+  const list = loadTasks();
+  const t = list.find(i => i.id === id);
+  if (t) t.text = (text || '').trim();
+  saveTasks(list);
+  return list;
+}
 // 把 draggedId 移到 targetId 的前 / 后,并跟随目标的优先级(支持跨组拖拽排序)
 function moveTask(draggedId, targetId, before) {
   const list = loadTasks();

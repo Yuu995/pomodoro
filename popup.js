@@ -296,7 +296,9 @@ function ppRow(t, p) {
     renderPpTasks();
   });
   const span = document.createElement('span');
-  span.className = 'pp-text'; span.textContent = t.text;
+  span.className = 'pp-text'; span.innerHTML = renderMarkdown(t.text);
+  span.title = '双击编辑';
+  span.addEventListener('dblclick', () => beginTaskEdit(row, span, t, renderPpTasks));
   row.append(box, span);
   if (t.done && t.completedAt) {
     const time = document.createElement('span');

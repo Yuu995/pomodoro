@@ -182,7 +182,21 @@ body.mode-short, body.mode-long { --accent: var(--sage); --accent-deep: var(--sa
   color: #fff; font-size: 9px; line-height: 1;
   display: flex; align-items: center; justify-content: center; transition: all .15s;
 }
-.pp-text { flex: 1; min-width: 0; font-family: var(--sans); font-size: 12px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp-text { flex: 1; min-width: 0; font-family: var(--sans); font-size: 12px; color: var(--ink); line-height: 1.45; word-break: break-word; }
+.pp-text code { font-family: ui-monospace, "SF Mono", monospace; font-size: .9em; background: var(--hair); padding: 1px 5px; border-radius: 4px; }
+.pp-text a { color: var(--accent); text-decoration: underline; }
+.pp-text del { opacity: .55; }
+.pp-text .md-list { margin: 2px 0; padding-left: 1.3em; }
+.pp-text .md-list li { margin: 1px 0; }
+.pp-text .md-line + .md-line { margin-top: 2px; }
+.pp-row { align-items: flex-start; }
+.pp-row .check, .pp-row .pp-del { margin-top: 1px; }
+.task-edit {
+  flex: 1; min-width: 0; box-sizing: border-box;
+  font-family: var(--sans); font-size: 12px; line-height: 1.45; color: var(--ink);
+  background: var(--glass-soft); border: 1px solid var(--accent); border-radius: 7px;
+  padding: 4px 7px; resize: none; outline: none; overflow: hidden;
+}
 .prio-tag {
   flex: none; white-space: nowrap; cursor: pointer;
   font-family: var(--sans); font-size: 10px; letter-spacing: .02em;
