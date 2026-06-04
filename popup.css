@@ -1,7 +1,7 @@
 /* 状态栏快捷计时悬浮窗 · 沿用主应用的暖白极简风 */
 :root {
-  --paper:      #f7f3ec;
-  --paper-2:    #efe9df;
+  --paper:      #fbfcff;
+  --paper-2:    #f1f3f7;
   --ink:        #2c2825;
   --ink-soft:   #94897b;
   --hair:       rgba(44,40,37,.11);
@@ -18,7 +18,7 @@
 /* 深色调色板(跟随主窗口的主题设置)*/
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper:#2a2d33; --paper-2:#33373f; --ink:#e9ebef; --ink-soft:#9aa0ab;
+    --paper:#30343c; --paper-2:#3a3f48; --ink:#e9ebef; --ink-soft:#9aa0ab;
     --hair:rgba(255,255,255,.10); --hair-strong:rgba(255,255,255,.18);
     --coral:#e07a5f; --coral-deep:#c9684f; --sage:#9aa888; --sage-deep:#82906f;
   }
@@ -176,6 +176,11 @@ body.mode-short, body.mode-long { --accent: var(--sage); --accent-deep: var(--sa
 .pp-row.dragging { opacity: .4; }
 .pp-row.drag-over-top { box-shadow: inset 0 2px 0 0 var(--accent); }
 .pp-row.drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--accent); }
+
+/* 顶部标题栏 */
+.pp-top { display: flex; align-items: center; margin-bottom: 10px; }
+.pp-title { font-family: var(--sans); font-size: 14px; font-weight: 500; letter-spacing: .12em; color: var(--ink); }
+.pp-top .expand { margin-left: auto; }
 .check {
   flex: none; width: 15px; height: 15px; border-radius: 4px;
   border: 1.5px solid var(--ink-soft); background: transparent; cursor: pointer;

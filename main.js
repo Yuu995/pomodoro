@@ -1,6 +1,9 @@
 const { app, BrowserWindow, ipcMain, Tray, nativeImage, Menu, screen, nativeTheme } = require('electron');
 const path = require('path');
 
+// 锁定数据目录到原路径,改名(productName/name)后历史任务数据不丢
+app.setPath('userData', path.join(app.getPath('appData'), 'tomato-clock'));
+
 let mainWindow = null;
 let popover = null;
 let tray = null;
@@ -17,7 +20,7 @@ function createWindow() {
     minHeight: 560,
     center: true,
     resizable: true,
-    title: '番茄钟',
+    title: 'ToDo',
     vibrancy: 'under-window',       // macOS 原生毛玻璃,透出桌面并模糊
     visualEffectState: 'active',
     backgroundColor: '#00000000',
@@ -64,7 +67,7 @@ function createPopover() {
     }
   });
   popover.loadFile('popup.html');
-  popover.on('blur', () => { if (popover && popover.isVisible()) popover.hide(); }); // 失焦收起
+  // 不再「失焦即收起」,以便与主窗口并存;收起改由光标离开判定(scheduleHide)
 }
 
 // 把悬浮窗定位到状态栏图标正下方
@@ -87,7 +90,7 @@ function showPopover() {
   clearTimeout(hideTimer);
   if (!popover.isVisible()) {
     positionPopover();
-    popover.show(); // 激活窗口,以便在 ToDo 页直接输入
+    popover.showInactive(); // 不抢焦点,可与主窗口同时显示
     popover.webContents.send('popover-shown');
   }
 }
@@ -124,14 +127,14 @@ function createTray() {
   todoIcon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'todoTemplate.png'));
   todoIcon.setTemplateImage(true);
 
-  tray = new Tray(todoIcon); // 默认 ToDo 图标
-  tray.setToolTip('番茄钟 · 悬停展开');
+  tray = new Tray(todoIcon);
+  tray.setToolTip('ToDo · 悬停展开');
 
   const menu = Menu.buildFromTemplate([
     { label: '打开主窗口', click: showMainWindow },
-    { label: '快捷计时面板', click: togglePopover },
+    { label: '快捷待办面板', click: togglePopover },
     { type: 'separator' },
-    { label: '退出番茄钟', click: () => app.quit() }
+    { label: '退出', click: () => app.quit() }
   ]);
 
   tray.on('mouse-enter', showPopover);        // 悬停图标:自动弹出

@@ -1,7 +1,7 @@
 {
-  "name": "tomato-clock",
-  "version": "1.0.2",
-  "description": "一个简洁的桌面番茄钟",
+  "name": "todo-app",
+  "version": "1.1.0",
+  "description": "一个简洁的桌面待办清单",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -15,7 +15,7 @@
   },
   "build": {
     "appId": "com.tomato.clock",
-    "productName": "番茄钟",
+    "productName": "ToDo",
     "files": [
       "main.js",
       "preload.js",

@@ -98,6 +98,26 @@ function updateTaskText(id, text) {
   saveTasks(list);
   return list;
 }
+// 计划日期(due):'YYYY-MM-DD' 字符串,或 '' / null 清除
+function setTaskDate(id, dateStr) {
+  const list = loadTasks();
+  const t = list.find(i => i.id === id);
+  if (t) t.due = dateStr || null;
+  saveTasks(list);
+  return list;
+}
+// 把 'YYYY-MM-DD' 转成本地 Date(避免时区偏移)
+function parseDue(s) {
+  if (!s) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+function dueKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 // 把 draggedId 移到 targetId 的前 / 后,并跟随目标的优先级(支持跨组拖拽排序)
 function moveTask(draggedId, targetId, before) {
   const list = loadTasks();
