@@ -10,6 +10,10 @@ let currentFilter = 'all';  // all | done | trash
 let currentView = 'list';   // list | calendar
 let calCursor = null;       // 日历当前月 {y, m}
 
+// 内容区大标题随侧栏过滤切换
+const FILTER_TITLE = { all: '全部', done: '已完成', trash: '回收站' };
+function setContentTitle(text) { const el = $('contentTitle'); if (el) el.textContent = text; }
+
 // —— 添加区:状态标签循环切换 ——
 function paintStatusTag() {
   const p = PRIORITY_MAP[addPriority];
@@ -28,7 +32,17 @@ function doAddTask() {
   taskInput.focus();
   renderTasks();
 }
-taskInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAddTask(); });
+taskInput.addEventListener('keydown', (e) => {
+  // 上下键快速切换优先级(↑ 提高紧急度,↓ 降低)
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    e.preventDefault();
+    addPriority = e.key === 'ArrowUp' ? prevPriority(addPriority) : nextPriority(addPriority);
+    paintStatusTag();
+    return;
+  }
+  // 跳过输入法组合态的回车(否则中文确认词时会误触发 / 不清空)
+  if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) doAddTask();
+});
 
 // —— 左侧任务栏:全部 / 已完成 / 回收站 ——
 document.querySelectorAll('.side-item').forEach(item => {
@@ -40,12 +54,25 @@ document.querySelectorAll('.side-item').forEach(item => {
   });
 });
 
-// —— 任务栏展开 / 收起 ——
+// —— 任务栏展开 / 收起(顶部统一按钮,位置固定) ——
 const SIDEBAR_KEY = 'tomato_sidebar_collapsed';
-function applySidebar() { document.body.classList.toggle('sidebar-collapsed', localStorage.getItem(SIDEBAR_KEY) === '1'); }
-$('sideCollapse').addEventListener('click', () => { localStorage.setItem(SIDEBAR_KEY, '1'); applySidebar(); });
-$('sideExpand').addEventListener('click', () => { localStorage.setItem(SIDEBAR_KEY, '0'); applySidebar(); });
+function applySidebar() {
+  const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  const btn = $('sideToggle');
+  if (btn) { btn.textContent = collapsed ? '»' : '«'; btn.title = collapsed ? '展开任务栏' : '收起任务栏'; }
+}
+$('sideToggle').addEventListener('click', () => {
+  const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
+  localStorage.setItem(SIDEBAR_KEY, collapsed ? '0' : '1');
+  applySidebar();
+});
 applySidebar();
+
+// 窗口失焦时选中条变灰(macOS 原生行为)
+window.addEventListener('focus', () => document.body.classList.remove('win-inactive'));
+window.addEventListener('blur', () => document.body.classList.add('win-inactive'));
+if (!document.hasFocus()) document.body.classList.add('win-inactive');
 
 // —— 主题:跟随系统 → 浅色 → 深色 ——
 const THEMES = ['system', 'light', 'dark'];
@@ -81,6 +108,7 @@ function refresh() { currentView === 'calendar' ? renderCalendar() : renderTasks
 
 // ===== 列表视图 =====
 function renderTasks() {
+  setContentTitle(FILTER_TITLE[currentFilter] || '全部');
   purgeOldTrash();
   const all = loadTasks();
   $('cntAll').textContent = all.filter(t => !t.deleted && !t.done).length || '';
@@ -102,6 +130,7 @@ function renderAll(list) {
   if (!list.length) return emptyHint('还没有待办，在上方添加一条吧');
   PRIORITIES.forEach(p => {
     const items = sortTasks(list.filter(t => t.priority === p.key));
+    if (!items.length) return;            // 空优先级组不展示
     const group = document.createElement('div');
     group.className = 'task-group';
     const head = document.createElement('div');
@@ -109,10 +138,10 @@ function renderAll(list) {
     head.innerHTML = `<span class="ghead" style="color:${p.color}">${p.label}</span>` +
       `<span class="gcnt">${items.filter(i => !i.done).length || ''}</span>`;
     group.appendChild(head);
-    if (!items.length) {
-      const ph = document.createElement('div'); ph.className = 'group-empty'; ph.textContent = '拖到这里';
-      group.appendChild(ph);
-    } else items.forEach(t => group.appendChild(taskRow(t)));
+    const body = document.createElement('div');
+    body.className = 'group-body';
+    items.forEach(t => body.appendChild(taskRow(t)));
+    group.appendChild(body);
     group.addEventListener('dragover', (e) => { e.preventDefault(); group.classList.add('drop-hover'); });
     group.addEventListener('dragleave', (e) => { if (!group.contains(e.relatedTarget)) group.classList.remove('drop-hover'); });
     group.addEventListener('drop', (e) => {
@@ -124,9 +153,50 @@ function renderAll(list) {
   });
 }
 
+function doneDateLabel(key) {
+  const p = key.split('-').map(Number);
+  return `${p[1]}月${p[2]}日`;
+}
+// 已完成:按完成日期聚合,去掉优先级颜色区分
 function renderDone(list) {
   if (!list.length) return emptyHint('还没有已完成的任务');
-  sortTasks(list).forEach(t => taskList.appendChild(taskRow(t)));
+  const groups = {};
+  list.forEach(t => {
+    const key = t.completedAt ? dueKey(new Date(t.completedAt)) : '__early';
+    (groups[key] = groups[key] || []).push(t);
+  });
+  const keys = Object.keys(groups).sort((a, b) =>
+    a === '__early' ? 1 : b === '__early' ? -1 : b.localeCompare(a));
+  const todayKey = dueKey(new Date());
+  keys.forEach(k => {
+    const items = groups[k].sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+    const group = document.createElement('div'); group.className = 'task-group';
+    const head = document.createElement('div'); head.className = 'task-group-head';
+    const label = k === '__early' ? '更早' : (k === todayKey ? '今天' : doneDateLabel(k));
+    head.innerHTML = `<span class="ghead ghead-plain">${label}</span>` +
+      `<span class="gcnt">${items.length}</span>`;
+    group.appendChild(head);
+    const body = document.createElement('div'); body.className = 'group-body';
+    items.forEach(t => body.appendChild(doneRow(t)));
+    group.appendChild(body);
+    taskList.appendChild(group);
+  });
+}
+function doneRow(t) {
+  const row = document.createElement('div');
+  row.className = 'task-row done';
+  const box = document.createElement('button');
+  box.className = 'check done-check'; box.textContent = '✓'; box.title = '点按标记未完成';
+  box.addEventListener('click', () => { toggleTask(t.id); renderTasks(); });
+  const span = document.createElement('span');
+  span.className = 'task-text'; span.innerHTML = renderMarkdown(t.text); span.title = '双击编辑';
+  span.addEventListener('dblclick', () => beginTaskEdit(row, span, t, renderTasks));
+  row.append(box, span);
+  const del = document.createElement('button');
+  del.className = 'task-del'; del.textContent = '×'; del.title = '移入回收站';
+  del.addEventListener('click', () => { deleteTask(t.id); renderTasks(); });
+  row.appendChild(del);
+  return row;
 }
 
 function renderTrash(list) {
@@ -136,7 +206,9 @@ function renderTrash(list) {
   taskList.appendChild(tip);
   if (!list.length) return emptyHint('回收站是空的');
   list.sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
-  list.forEach(t => taskList.appendChild(trashRow(t)));
+  const body = document.createElement('div'); body.className = 'group-body';
+  list.forEach(t => body.appendChild(trashRow(t)));
+  taskList.appendChild(body);
 }
 
 function taskRow(t) {
@@ -177,13 +249,6 @@ function taskRow(t) {
   span.title = '双击编辑';
   span.addEventListener('dblclick', () => beginTaskEdit(row, span, t, renderTasks));
   row.append(box, span);
-  // 计划日期按钮
-  const dateBtn = document.createElement('button');
-  dateBtn.className = 'date-btn' + (t.due ? ' has' : '');
-  dateBtn.textContent = t.due ? formatDueShort(t.due) : '📅';
-  dateBtn.title = '计划日期';
-  dateBtn.addEventListener('click', (e) => { e.stopPropagation(); pickDate(t.id); });
-  row.appendChild(dateBtn);
   if (t.done && t.completedAt) {
     const time = document.createElement('span'); time.className = 'task-time'; time.textContent = formatMonthDay(t.completedAt);
     row.appendChild(time);
@@ -228,6 +293,7 @@ function pickDate(id) {
 function plainText(s) { return String(s).replace(/[*_~`#>\-]/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').trim(); }
 
 function renderCalendar() {
+  setContentTitle('日历');
   const cal = $('calendar');
   const all = loadTasks().filter(t => !t.deleted);
   const now = new Date();
@@ -254,7 +320,11 @@ function renderCalendar() {
   const daysInMonth = new Date(calCursor.y, calCursor.m + 1, 0).getDate();
   const todayStr = dueKey(now);
   const byDue = {};
-  all.forEach(t => { if (t.due) (byDue[t.due] = byDue[t.due] || []).push(t); });
+  all.forEach(t => {
+    // 已完成按完成日期落格,未完成按计划日期落格
+    const key = t.done ? (t.completedAt ? dueKey(new Date(t.completedAt)) : t.due) : t.due;
+    if (key) (byDue[key] = byDue[key] || []).push(t);
+  });
 
   for (let i = 0; i < startDow; i++) { const c = document.createElement('div'); c.className = 'cal-cell empty'; grid.appendChild(c); }
   for (let d = 1; d <= daysInMonth; d++) {
@@ -288,7 +358,7 @@ function renderCalendar() {
   // 未排期(无 due 的未完成任务)
   const un = all.filter(t => !t.due && !t.done);
   const box = document.createElement('div'); box.className = 'cal-unscheduled';
-  const h = document.createElement('div'); h.className = 'cal-un-title'; h.textContent = un.length ? '未排期 · 拖到日期 或 点一下设日期' : '没有未排期的任务';
+  const h = document.createElement('div'); h.className = 'cal-un-title'; h.textContent = un.length ? '未排期 · 拖到日期排期' : '没有未排期的任务';
   box.appendChild(h);
   if (un.length) {
     const list = document.createElement('div'); list.className = 'cal-un-list';
@@ -298,7 +368,6 @@ function renderCalendar() {
       chip.textContent = plainText(t.text).slice(0, 18) || '任务';
       chip.title = t.text;
       chip.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', t.id); e.dataTransfer.effectAllowed = 'move'; });
-      chip.addEventListener('click', () => pickDate(t.id));
       list.appendChild(chip);
     });
     box.appendChild(list);

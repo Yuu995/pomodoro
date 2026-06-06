@@ -13,5 +13,7 @@ contextBridge.exposeInMainWorld('tomato', {
   hoverEnter: () => ipcRenderer.send('popover-hover-enter'),
   hoverLeave: () => ipcRenderer.send('popover-hover-leave'),
   // 同步原生外观:'system' | 'light' | 'dark'
-  setTheme: (mode) => ipcRenderer.send('set-theme', mode)
+  setTheme: (mode) => ipcRenderer.send('set-theme', mode),
+  // 主窗口聚焦/失焦(用于选中条失焦变灰)
+  onWinActive: (cb) => ipcRenderer.on('win-active', (_e, active) => cb(active))
 });

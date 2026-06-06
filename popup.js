@@ -23,7 +23,14 @@ ppStatusTag.addEventListener('click', () => { ppPriority = nextPriority(ppPriori
 paintPpStatus();
 
 ppTaskInput.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter') return;
+  // 上下键快速切换优先级
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    e.preventDefault();
+    ppPriority = e.key === 'ArrowUp' ? prevPriority(ppPriority) : nextPriority(ppPriority);
+    paintPpStatus();
+    return;
+  }
+  if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
   const v = ppTaskInput.value.trim();
   if (!v) return;
   addTask(v, ppPriority);
@@ -74,7 +81,9 @@ function renderPpTasks() {
     head.innerHTML = `<span class="ghead" style="color:${p.color}">${p.label}</span>` +
       `<span class="gcnt">${items.filter(i => !i.done).length || ''}</span>`;
     group.appendChild(head);
-    items.forEach(t => group.appendChild(ppRow(t, p)));
+    const body = document.createElement('div'); body.className = 'pp-group-body';
+    items.forEach(t => body.appendChild(ppRow(t, p)));
+    group.appendChild(body);
     group.addEventListener('dragover', (e) => { e.preventDefault(); group.classList.add('drop-hover'); });
     group.addEventListener('dragleave', (e) => { if (!group.contains(e.relatedTarget)) group.classList.remove('drop-hover'); });
     group.addEventListener('drop', (e) => {

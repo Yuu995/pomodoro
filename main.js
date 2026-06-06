@@ -20,10 +20,10 @@ function createWindow() {
     minHeight: 560,
     center: true,
     resizable: true,
-    title: 'ToDo',
-    vibrancy: 'under-window',       // macOS 原生毛玻璃,透出桌面并模糊
-    visualEffectState: 'active',
-    backgroundColor: '#00000000',
+    title: 'TODO',
+    titleBarStyle: 'hiddenInset',   // 隐藏标题栏,红绿灯悬浮,内容延伸到顶部
+    trafficLightPosition: { x: 14, y: 18 },
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1b1b1d' : '#ffffff', // AI Studio 纯白底
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -33,6 +33,9 @@ function createWindow() {
   });
   mainWindow.loadFile('index.html');
   mainWindow.on('closed', () => { mainWindow = null; });
+  // 窗口聚焦/失焦 → 通知渲染层(失焦时选中条变灰,macOS 行为)
+  mainWindow.on('focus', () => mainWindow && mainWindow.webContents.send('win-active', true));
+  mainWindow.on('blur', () => mainWindow && mainWindow.webContents.send('win-active', false));
 }
 
 function showMainWindow() {
@@ -47,8 +50,8 @@ function showMainWindow() {
 // —— 悬浮窗(状态栏快捷计时)——
 function createPopover() {
   popover = new BrowserWindow({
-    width: 364,
-    height: 476,
+    width: 384,
+    height: 514,
     show: false,
     frame: false,
     transparent: true,
@@ -90,7 +93,7 @@ function showPopover() {
   clearTimeout(hideTimer);
   if (!popover.isVisible()) {
     positionPopover();
-    popover.showInactive(); // 不抢焦点,可与主窗口同时显示
+    popover.show(); // 获焦,hover 弹出即可直接输入
     popover.webContents.send('popover-shown');
   }
 }
@@ -128,7 +131,7 @@ function createTray() {
   todoIcon.setTemplateImage(true);
 
   tray = new Tray(todoIcon);
-  tray.setToolTip('ToDo · 悬停展开');
+  tray.setToolTip('TODO · 悬停展开');
 
   const menu = Menu.buildFromTemplate([
     { label: '打开主窗口', click: showMainWindow },
@@ -149,8 +152,11 @@ ipcMain.on('open-main', () => { showMainWindow(); if (popover) popover.hide(); }
 ipcMain.on('hide-popover', () => { if (popover) popover.hide(); });
 ipcMain.on('popover-hover-enter', () => clearTimeout(hideTimer)); // 鼠标进入悬浮窗:取消收起
 ipcMain.on('popover-hover-leave', scheduleHide);                  // 鼠标离开悬浮窗:延迟收起
-ipcMain.on('set-theme', (_e, mode) => {                           // 同步原生外观(含毛玻璃明暗)
-  if (['system', 'light', 'dark'].includes(mode)) nativeTheme.themeSource = mode;
+ipcMain.on('set-theme', (_e, mode) => {                           // 同步原生外观 + 窗口底色
+  if (['system', 'light', 'dark'].includes(mode)) {
+    nativeTheme.themeSource = mode;
+    if (mainWindow) mainWindow.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#1b1b1d' : '#ffffff');
+  }
 });
 
 app.whenReady().then(() => {
