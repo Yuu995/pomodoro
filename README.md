@@ -49,7 +49,17 @@
 
 到 [Releases](https://github.com/Yuu995/pomodoro/releases) 下载最新的 `TODO-x.x.x-arm64.dmg`，双击打开、把图标拖进「应用程序」即可。
 
-> 首次打开若提示「来自身份不明的开发者」，右键点应用图标 →「打开」。目前为 Apple Silicon（arm64）构建。
+> 目前为 Apple Silicon（arm64）构建，应用未做 Apple 付费签名 / 公证。
+
+### 打开时提示「已损坏，无法打开」？
+
+不是真的损坏，是 macOS Gatekeeper 在拦未签名的下载应用。把 app 拖进「应用程序」后，打开「终端」执行一行命令清除隔离标记即可：
+
+```bash
+xattr -cr /Applications/ToDo.app
+```
+
+> 不确定路径的话：终端先输入 `xattr -cr `（末尾留一个空格），再把 ToDo.app 图标拖进终端窗口（会自动补全路径），回车。之后双击即可正常打开。
 
 ### 升级会丢数据吗？
 
