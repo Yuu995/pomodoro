@@ -49,6 +49,18 @@ body {
 /* 顶部标题 */
 .pp-top { display: flex; align-items: center; margin-bottom: 12px; }
 .pp-title { font-size: 16px; font-weight: 600; letter-spacing: -.01em; color: var(--label); }
+/* 待办 / 想法 模式切换 */
+.pp-mode {
+  display: flex; gap: 2px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 2px;
+}
+.pm-btn {
+  font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: .04em; padding: 3px 11px;
+  border: none; border-radius: 6px; background: transparent;
+  color: var(--label-2); cursor: pointer; transition: background .12s, color .12s;
+}
+.pm-btn:hover { color: var(--label); }
+.pm-btn.active { background: var(--card); color: var(--label); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
 .expand {
   margin-left: auto; width: 28px; height: 28px; border: 1px solid var(--border);
   background: var(--card); border-radius: 9px; cursor: pointer;
@@ -75,6 +87,16 @@ body {
 }
 #ppTaskInput:focus { outline: none; }
 #ppTaskInput::placeholder { color: var(--label-3); }
+/* 想法:多行输入框,大一些 */
+.pp-idea-input {
+  flex: 1; min-width: 0; box-sizing: border-box;
+  font-family: inherit; font-size: 13px; line-height: 1.5; color: var(--label);
+  background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
+  padding: 7px 9px; resize: none; outline: none; overflow: hidden; min-height: 46px;
+  transition: border-color .15s;
+}
+.pp-idea-input:focus { border-color: var(--accent); }
+.pp-idea-input::placeholder { color: var(--label-3); }
 
 /* 列表 */
 .pp-task-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
@@ -127,3 +149,19 @@ body {
   background: var(--card); border: 1px solid var(--accent); border-radius: 8px;
   padding: 5px 8px; resize: none; outline: none; overflow: hidden;
 }
+
+/* ===== 想法行 ===== */
+.pp-row.idea { cursor: default; }
+.pp-bulb {
+  flex: none; width: 15px; height: 15px; color: var(--label-3); margin-top: 2px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pp-bulb svg { width: 14px; height: 14px; display: block; }
+.pp-act {
+  flex: none; font-family: inherit; font-size: 10px; padding: 2px 7px; margin-top: 1px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--card);
+  color: var(--label-2); cursor: pointer; opacity: 0;
+  transition: opacity .15s, background .12s, color .12s;
+}
+.pp-row:hover .pp-act { opacity: 1; }
+.pp-act:hover { background: var(--hover); color: var(--label); }

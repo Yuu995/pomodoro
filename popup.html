@@ -10,12 +10,16 @@
   <div class="wrap">
     <div class="card">
       <nav class="pp-top">
-        <span class="pp-title">TODO</span>
+        <div class="pp-mode" id="ppMode">
+          <button class="pm-btn active" data-mode="todo">TODO</button>
+          <button class="pm-btn" data-mode="idea">IDEA</button>
+        </div>
         <button class="expand" id="openMain" title="打开主窗口" aria-label="打开主窗口">↗</button>
       </nav>
       <div class="pp-task-add">
         <button class="status-tag" id="ppStatusTag" data-prio="high">今天做完</button>
         <input type="text" id="ppTaskInput" placeholder="回车保存…" maxlength="160" />
+        <textarea id="ppIdeaInput" class="pp-idea-input" placeholder="记录想法,回车保存,Shift+Enter 换行…" rows="2" hidden></textarea>
       </div>
       <div class="pp-task-list" id="ppTaskList"></div>
     </div>

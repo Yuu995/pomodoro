@@ -76,11 +76,14 @@ function purgeTask(id) { // 彻底删除
   return list;
 }
 const TRASH_TTL = 14 * 24 * 60 * 60 * 1000; // 回收站保留 14 天
-function purgeOldTrash() { // 清除回收站中超过 14 天的
+function purgeOldTrash() { // 清除回收站中超过 14 天的(任务 + 想法)
   const cutoff = Date.now() - TRASH_TTL;
   const list = loadTasks();
   const kept = list.filter(t => !(t.deleted && t.deletedAt && t.deletedAt < cutoff));
   if (kept.length !== list.length) saveTasks(kept);
+  const ideas = loadIdeas();
+  const keptIdeas = ideas.filter(i => !(i.deleted && i.deletedAt && i.deletedAt < cutoff));
+  if (keptIdeas.length !== ideas.length) saveIdeas(keptIdeas);
   return kept;
 }
 function trashDaysLeft(t) { // 回收站剩余天数
@@ -145,4 +148,56 @@ function clearDoneTasks() {
 // 排序:完成的沉底;其余保持数组(手动拖拽)顺序(Array.sort 稳定)
 function sortTasks(list) {
   return list.slice().sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+}
+
+// ===== IDEA(随手记的想法)数据层 =====
+// 与任务独立存储;无优先级、无完成态,只有文本 + 记录时间
+const IDEAS_KEY = 'tomato_ideas';
+function loadIdeas() {
+  try { return JSON.parse(localStorage.getItem(IDEAS_KEY)) || []; }
+  catch { return []; }
+}
+function saveIdeas(list) { localStorage.setItem(IDEAS_KEY, JSON.stringify(list)); }
+function addIdea(text) {
+  text = (text || '').trim();
+  if (!text) return loadIdeas();
+  const list = loadIdeas();
+  list.push({ id: _genId(), text, createdAt: Date.now() });
+  saveIdeas(list);
+  return list;
+}
+function deleteIdea(id) { // 移入回收站(软删除)
+  const list = loadIdeas();
+  const i = list.find(x => x.id === id);
+  if (i) { i.deleted = true; i.deletedAt = Date.now(); }
+  saveIdeas(list);
+  return list;
+}
+function restoreIdea(id) {
+  const list = loadIdeas();
+  const i = list.find(x => x.id === id);
+  if (i) { i.deleted = false; i.deletedAt = null; }
+  saveIdeas(list);
+  return list;
+}
+function purgeIdea(id) {
+  const list = loadIdeas().filter(x => x.id !== id);
+  saveIdeas(list);
+  return list;
+}
+function updateIdeaText(id, text) {
+  const list = loadIdeas();
+  const i = list.find(x => x.id === id);
+  if (i) i.text = (text || '').trim();
+  saveIdeas(list);
+  return list;
+}
+// 想法转待办:默认进「要做的」,原想法移除
+function ideaToTask(id, priority = 'low') {
+  const ideas = loadIdeas();
+  const idea = ideas.find(x => x.id === id);
+  if (!idea) return loadTasks();
+  addTask(idea.text, priority);
+  saveIdeas(ideas.filter(x => x.id !== id));
+  return loadTasks();
 }

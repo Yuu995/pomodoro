@@ -3,6 +3,7 @@ const $ = (id) => document.getElementById(id);
 const ppTaskInput = $('ppTaskInput');
 const ppTaskList = $('ppTaskList');
 const ppStatusTag = $('ppStatusTag');
+const ppIdeaInput = $('ppIdeaInput');
 let ppPriority = 'high';
 
 // 状态栏图标旁显示未完成数量
@@ -22,6 +23,42 @@ function paintPpStatus() {
 ppStatusTag.addEventListener('click', () => { ppPriority = nextPriority(ppPriority); paintPpStatus(); });
 paintPpStatus();
 
+// —— TODO / IDEA 模式切换:hover 即切,默认 TODO ——
+let ppMode = localStorage.getItem('tomato_popup_mode') || 'todo';
+function applyPpMode() {
+  const isIdea = ppMode === 'idea';
+  document.querySelectorAll('.pm-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === ppMode));
+  ppStatusTag.hidden = isIdea;
+  ppTaskInput.hidden = isIdea;
+  ppIdeaInput.hidden = !isIdea;
+  renderPp();
+}
+function switchPpMode(mode) {
+  const focusEl = () => (mode === 'idea' ? ppIdeaInput : ppTaskInput).focus();
+  if (mode === ppMode) { focusEl(); return; }
+  ppMode = mode;
+  localStorage.setItem('tomato_popup_mode', ppMode);
+  applyPpMode();
+  focusEl();
+}
+document.querySelectorAll('.pm-btn').forEach(b => {
+  b.addEventListener('click', () => switchPpMode(b.dataset.mode));
+  b.addEventListener('mouseenter', () => switchPpMode(b.dataset.mode)); // hover 即切换
+});
+function renderPp() { ppMode === 'idea' ? renderPpIdeas() : renderPpTasks(); }
+
+// 想法输入:多行 textarea,回车保存 / Shift+Enter 换行,内容支持 markdown
+function ppIdeaAutosize() { ppIdeaInput.style.height = 'auto'; ppIdeaInput.style.height = Math.min(ppIdeaInput.scrollHeight, 120) + 'px'; }
+ppIdeaInput.addEventListener('input', ppIdeaAutosize);
+ppIdeaInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+    e.preventDefault();
+    const v = ppIdeaInput.value.trim();
+    if (!v) return;
+    addIdea(v); ppIdeaInput.value = ''; ppIdeaAutosize(); renderPp();
+  }
+});
+
 ppTaskInput.addEventListener('keydown', (e) => {
   // 上下键快速切换优先级
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -35,14 +72,14 @@ ppTaskInput.addEventListener('keydown', (e) => {
   if (!v) return;
   addTask(v, ppPriority);
   ppTaskInput.value = '';
-  renderPpTasks();
+  renderPp();
 });
 
 $('openMain').addEventListener('click', () => { if (window.tomato) window.tomato.openMain(); });
 
 // hover 弹出时自动聚焦输入框
 if (window.tomato && window.tomato.onShown) {
-  window.tomato.onShown(() => setTimeout(() => ppTaskInput.focus(), 0));
+  window.tomato.onShown(() => setTimeout(() => (ppMode === 'idea' ? ppIdeaInput : ppTaskInput).focus(), 0));
 }
 if (window.tomato && window.tomato.hoverEnter) {
   document.addEventListener('mouseenter', () => window.tomato.hoverEnter());
@@ -56,7 +93,7 @@ function applyPopupTheme() {
   else document.documentElement.setAttribute('data-theme', m);
 }
 window.addEventListener('storage', (e) => {
-  if (e.key === TASKS_KEY) renderPpTasks();
+  if (e.key === TASKS_KEY || e.key === IDEAS_KEY) renderPp();
   if (e.key === 'tomato_theme') applyPopupTheme();
 });
 applyPopupTheme();
@@ -141,4 +178,41 @@ function ppRow(t, p) {
   return row;
 }
 
-renderPpTasks();
+// ===== 想法模式:平铺流水,新的在上 =====
+const PP_BULB_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 3.6 10.8c-.7.55-1.1 1.3-1.1 2.2H9.5c0-.9-.4-1.65-1.1-2.2A6 6 0 0 1 12 3z"/></svg>';
+function ppIdeaTime(ts) {
+  const d = new Date(ts || 0);
+  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return dueKey(d) === dueKey(new Date()) ? hm : `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+function renderPpIdeas() {
+  purgeOldTrash();
+  const list = loadIdeas().filter(i => !i.deleted).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  ppTaskList.innerHTML = '';
+  if (!list.length) {
+    const e = document.createElement('div'); e.className = 'pp-empty'; e.textContent = '还没有想法,随手记一条吧 💡';
+    ppTaskList.appendChild(e); syncTray(); return;
+  }
+  list.forEach(i => ppTaskList.appendChild(ppIdeaRow(i)));
+  syncTray();
+}
+function ppIdeaRow(idea) {
+  const row = document.createElement('div');
+  row.className = 'pp-row idea';
+  const bulb = document.createElement('span');
+  bulb.className = 'pp-bulb'; bulb.innerHTML = PP_BULB_SVG;
+  const span = document.createElement('span');
+  span.className = 'pp-text'; span.innerHTML = renderMarkdown(idea.text); span.title = '双击编辑';
+  span.addEventListener('dblclick', () => beginTaskEdit(row, span, idea, renderPp, updateIdeaText));
+  const time = document.createElement('span'); time.className = 'pp-time'; time.textContent = ppIdeaTime(idea.createdAt);
+  const conv = document.createElement('button');
+  conv.className = 'pp-act'; conv.textContent = '转待办'; conv.title = '转成「要做的」待办';
+  conv.addEventListener('click', () => { ideaToTask(idea.id, 'low'); renderPp(); });
+  const del = document.createElement('button');
+  del.className = 'pp-del'; del.textContent = '×'; del.title = '移入回收站';
+  del.addEventListener('click', () => { deleteIdea(idea.id); renderPp(); });
+  row.append(bulb, span, time, conv, del);
+  return row;
+}
+
+applyPpMode();

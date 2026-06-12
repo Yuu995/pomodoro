@@ -4,6 +4,7 @@ const taskInput = $('taskInput');
 const taskList = $('taskList');
 const taskBadge = $('cntAll'); // 未完成数显示在侧栏「全部」
 const statusTag = $('statusTag');
+const ideaInput = $('ideaInput');
 
 let addPriority = 'high';   // 新任务默认「今天做完」
 let currentFilter = 'all';  // all | done | trash
@@ -11,7 +12,7 @@ let currentView = 'list';   // list | calendar
 let calCursor = null;       // 日历当前月 {y, m}
 
 // 内容区大标题随侧栏过滤切换
-const FILTER_TITLE = { all: '全部', done: '已完成', trash: '回收站' };
+const FILTER_TITLE = { all: '全部', idea: 'IDEA', done: '已完成', trash: '回收站' };
 function setContentTitle(text) { const el = $('contentTitle'); if (el) el.textContent = text; }
 
 // —— 添加区:状态标签循环切换 ——
@@ -32,9 +33,27 @@ function doAddTask() {
   taskInput.focus();
   renderTasks();
 }
+
+// 添加栏随当前视图切换:IDEA 用多行 textarea(无优先级、支持 markdown)
+function syncAddBar() {
+  const isIdea = currentFilter === 'idea';
+  statusTag.hidden = isIdea;
+  taskInput.hidden = isIdea;
+  ideaInput.hidden = !isIdea;
+}
+function ideaAutosize() { ideaInput.style.height = 'auto'; ideaInput.style.height = Math.min(ideaInput.scrollHeight, 160) + 'px'; }
+ideaInput.addEventListener('input', ideaAutosize);
+ideaInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+    e.preventDefault();
+    const v = ideaInput.value.trim();
+    if (!v) return;
+    addIdea(v); ideaInput.value = ''; ideaAutosize(); renderTasks();
+  }
+});
 taskInput.addEventListener('keydown', (e) => {
-  // 上下键快速切换优先级(↑ 提高紧急度,↓ 降低)
-  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+  // 上下键快速切换优先级(↑ 提高紧急度,↓ 降低);IDEA 无优先级不响应
+  if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && currentFilter !== 'idea') {
     e.preventDefault();
     addPriority = e.key === 'ArrowUp' ? prevPriority(addPriority) : nextPriority(addPriority);
     paintStatusTag();
@@ -49,7 +68,9 @@ document.querySelectorAll('.side-item').forEach(item => {
   item.addEventListener('click', () => {
     currentFilter = item.dataset.filter;
     document.querySelectorAll('.side-item').forEach(s => s.classList.toggle('active', s === item));
-    $('taskAdd').style.display = currentFilter === 'all' ? '' : 'none';
+    $('taskAdd').style.display = (currentFilter === 'all' || currentFilter === 'idea') ? '' : 'none';
+    $('viewToggle').style.display = currentFilter === 'idea' ? 'none' : ''; // 日历只属于待办
+    syncAddBar();
     renderTasks();
   });
 });
@@ -111,13 +132,16 @@ function renderTasks() {
   setContentTitle(FILTER_TITLE[currentFilter] || '全部');
   purgeOldTrash();
   const all = loadTasks();
+  const ideas = loadIdeas();
   $('cntAll').textContent = all.filter(t => !t.deleted && !t.done).length || '';
+  $('cntIdea').textContent = ideas.filter(i => !i.deleted).length || '';
   $('cntDone').textContent = all.filter(t => !t.deleted && t.done).length || '';
-  $('cntTrash').textContent = all.filter(t => t.deleted).length || '';
+  $('cntTrash').textContent = (all.filter(t => t.deleted).length + ideas.filter(i => i.deleted).length) || '';
 
   taskList.innerHTML = '';
-  if (currentFilter === 'trash') return renderTrash(all.filter(t => t.deleted));
+  if (currentFilter === 'trash') return renderTrash(all.filter(t => t.deleted), ideas.filter(i => i.deleted));
   if (currentFilter === 'done') return renderDone(all.filter(t => !t.deleted && t.done));
+  if (currentFilter === 'idea') return renderIdeas(ideas.filter(i => !i.deleted));
   renderAll(all.filter(t => !t.deleted));
 }
 
@@ -199,15 +223,66 @@ function doneRow(t) {
   return row;
 }
 
-function renderTrash(list) {
+// ===== IDEA 视图:按记录日期聚合,新的在上 =====
+function formatClock(ts) {
+  const d = new Date(ts || 0);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+const BULB_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 3.6 10.8c-.7.55-1.1 1.3-1.1 2.2H9.5c0-.9-.4-1.65-1.1-2.2A6 6 0 0 1 12 3z"/></svg>';
+
+function renderIdeas(list) {
+  if (!list.length) return emptyHint('还没有想法,随手记一条吧 💡');
+  const groups = {};
+  list.forEach(i => { const k = dueKey(new Date(i.createdAt || 0)); (groups[k] = groups[k] || []).push(i); });
+  const keys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+  const todayKey = dueKey(new Date());
+  keys.forEach(k => {
+    const items = groups[k].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const group = document.createElement('div'); group.className = 'task-group';
+    const head = document.createElement('div'); head.className = 'task-group-head';
+    head.innerHTML = `<span class="ghead ghead-plain">${k === todayKey ? '今天' : doneDateLabel(k)}</span>` +
+      `<span class="gcnt">${items.length}</span>`;
+    group.appendChild(head);
+    const body = document.createElement('div'); body.className = 'group-body';
+    items.forEach(i => body.appendChild(ideaRow(i)));
+    group.appendChild(body);
+    taskList.appendChild(group);
+  });
+}
+
+function ideaRow(idea) {
+  const row = document.createElement('div');
+  row.className = 'task-row idea';
+  const bulb = document.createElement('span');
+  bulb.className = 'idea-bulb'; bulb.innerHTML = BULB_SVG;
+  const span = document.createElement('span');
+  span.className = 'task-text'; span.innerHTML = renderMarkdown(idea.text); span.title = '双击编辑';
+  span.addEventListener('dblclick', () => beginTaskEdit(row, span, idea, renderTasks, updateIdeaText));
+  const time = document.createElement('span');
+  time.className = 'task-time'; time.textContent = formatClock(idea.createdAt);
+  const conv = document.createElement('button');
+  conv.className = 'row-act ghost-act'; conv.textContent = '转待办'; conv.title = '转成「要做的」待办';
+  conv.addEventListener('click', () => { ideaToTask(idea.id, 'low'); renderTasks(); });
+  const del = document.createElement('button');
+  del.className = 'task-del'; del.textContent = '×'; del.title = '移入回收站';
+  del.addEventListener('click', () => { deleteIdea(idea.id); renderTasks(); });
+  row.append(bulb, span, time, conv, del);
+  return row;
+}
+
+// ===== 回收站:任务与想法合并展示 =====
+function renderTrash(tasks, ideas) {
   const tip = document.createElement('div');
   tip.className = 'trash-tip';
-  tip.textContent = '回收站里的任务超过 14 天会自动清除';
+  tip.textContent = '回收站里的内容超过 14 天会自动清除';
   taskList.appendChild(tip);
-  if (!list.length) return emptyHint('回收站是空的');
-  list.sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+  const items = [
+    ...tasks.map(t => ({ kind: 'task', item: t })),
+    ...ideas.map(i => ({ kind: 'idea', item: i }))
+  ].sort((a, b) => (b.item.deletedAt || 0) - (a.item.deletedAt || 0));
+  if (!items.length) return emptyHint('回收站是空的');
   const body = document.createElement('div'); body.className = 'group-body';
-  list.forEach(t => body.appendChild(trashRow(t)));
+  items.forEach(x => body.appendChild(trashRow(x.item, x.kind)));
   taskList.appendChild(body);
 }
 
@@ -260,18 +335,24 @@ function taskRow(t) {
   return row;
 }
 
-function trashRow(t) {
-  const p = PRIORITY_MAP[t.priority] || PRIORITIES[0];
+function trashRow(t, kind) {
+  const isIdea = kind === 'idea';
   const row = document.createElement('div');
   row.className = 'task-row trash';
-  const dot = document.createElement('span'); dot.className = 'trash-dot'; dot.style.background = p.color;
+  let lead;
+  if (isIdea) {
+    lead = document.createElement('span'); lead.className = 'idea-bulb'; lead.innerHTML = BULB_SVG; lead.title = '想法';
+  } else {
+    const p = PRIORITY_MAP[t.priority] || PRIORITIES[0];
+    lead = document.createElement('span'); lead.className = 'trash-dot'; lead.style.background = p.color;
+  }
   const span = document.createElement('span'); span.className = 'task-text'; span.innerHTML = renderMarkdown(t.text);
   const days = document.createElement('span'); days.className = 'task-time'; days.textContent = `剩 ${trashDaysLeft(t)} 天`;
   const restore = document.createElement('button'); restore.className = 'row-act'; restore.textContent = '恢复';
-  restore.addEventListener('click', () => { restoreTask(t.id); renderTasks(); });
+  restore.addEventListener('click', () => { (isIdea ? restoreIdea : restoreTask)(t.id); renderTasks(); });
   const purge = document.createElement('button'); purge.className = 'row-act danger'; purge.textContent = '彻底删除';
-  purge.addEventListener('click', () => { purgeTask(t.id); renderTasks(); });
-  row.append(dot, span, days, restore, purge);
+  purge.addEventListener('click', () => { (isIdea ? purgeIdea : purgeTask)(t.id); renderTasks(); });
+  row.append(lead, span, days, restore, purge);
   return row;
 }
 
@@ -376,4 +457,5 @@ function renderCalendar() {
 }
 
 // ===== 初始化 =====
+syncAddBar();
 renderTasks();

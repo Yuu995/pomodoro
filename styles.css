@@ -168,6 +168,16 @@ body.sidebar-collapsed .content-bar { padding-left: 82px; }
 }
 #taskInput:focus { outline: none; }
 #taskInput::placeholder { color: var(--label-3); }
+/* 想法:多行输入框,大一些,支持 markdown 文本 */
+.idea-input {
+  flex: 1; min-width: 0; box-sizing: border-box;
+  font-family: inherit; font-size: 13.5px; line-height: 1.55; color: var(--label);
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 9px 12px; resize: none; outline: none; overflow: hidden; min-height: 54px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.idea-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.idea-input::placeholder { color: var(--label-3); }
 
 /* ===== 任务分组(优先级色标题 + 细边框白卡) ===== */
 .task-list { display: flex; flex-direction: column; }
@@ -229,6 +239,16 @@ body.sidebar-collapsed .content-bar { padding-left: 82px; }
 }
 
 .task-empty { text-align: center; color: var(--label-3); font-size: 14px; padding: 54px 0; }
+
+/* ===== IDEA 行 ===== */
+.task-row.idea { cursor: default; }
+.idea-bulb {
+  flex: none; width: 17px; height: 17px; color: var(--label-3);
+  display: flex; align-items: center; justify-content: center;
+}
+.idea-bulb svg { width: 16px; height: 16px; display: block; }
+.row-act.ghost-act { opacity: 0; transition: opacity .15s, background .12s, color .12s; }
+.task-row:hover .row-act.ghost-act { opacity: 1; }
 
 /* ===== 回收站 ===== */
 .trash-tip { font-size: 13px; color: var(--label-3); padding: 0 2px 14px; }
