@@ -1,29 +1,31 @@
 /* ============================================================
-   状态栏快捷待办悬浮窗 · Google AI Studio 视觉
+   状态栏快捷面板 · macOS 原生浮层视觉
    ============================================================ */
 :root {
-  --card:   #ffffff;
-  --panel:  #f5f6f7;          /* 分组卡浅灰底 */
-  --hover:  #ececef;
-  --border: #e3e5e8;
-  --border-soft: #eceef0;
-  --label:  #1f1f1f;
-  --label-2: #5f6368;
-  --label-3: #9aa0a6;
-  --accent: #1a73e8;
-  --red:    #d93025;
+  --card: #fafafb;
+  --panel: rgba(60, 60, 67, .07);
+  --hover: rgba(60, 60, 67, .08);
+  --border: rgba(60, 60, 67, .16);
+  --border-soft: rgba(60, 60, 67, .09);
+  --label: #202124;
+  --label-2: #62646a;
+  --label-3: #999ba1;
+  --accent: #4d79a7;
+  --red: #b45454;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
           "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --card:#242528; --panel:#2a2b2e; --hover:#313438; --border:#3c4043; --border-soft:#2f3134;
-    --label:#e8eaed; --label-2:#9aa0a6; --label-3:#6e7479; --accent:#8ab4f8; --red:#f28b82;
+    --card:#2a2b2f; --panel:rgba(255,255,255,.07); --hover:rgba(255,255,255,.08);
+    --border:rgba(255,255,255,.14); --border-soft:rgba(255,255,255,.08);
+    --label:#f0f0f2; --label-2:#a7a8ad; --label-3:#74767c; --accent:#82a5c9; --red:#d28181;
   }
 }
 :root[data-theme="dark"] {
-  --card:#242528; --panel:#2a2b2e; --hover:#313438; --border:#3c4043; --border-soft:#2f3134;
-  --label:#e8eaed; --label-2:#9aa0a6; --label-3:#6e7479; --accent:#8ab4f8; --red:#f28b82;
+  --card:#2a2b2f; --panel:rgba(255,255,255,.07); --hover:rgba(255,255,255,.08);
+  --border:rgba(255,255,255,.14); --border-soft:rgba(255,255,255,.08);
+  --label:#f0f0f2; --label-2:#a7a8ad; --label-3:#74767c; --accent:#82a5c9; --red:#d28181;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,55 +36,56 @@ body {
   user-select: none; overflow: hidden; -webkit-font-smoothing: antialiased;
 }
 
-.wrap { padding: 4px 24px 34px; height: 100%; }  /* 顶部贴状态栏,四周留足空间让阴影自然扩散 */
+.wrap { padding: 3px 28px 34px; height: 100%; }
 .card {
   position: relative; height: 100%;
-  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-  /* 多层叠加,由近及远柔和过渡,边界不生硬 */
+  background: var(--card); border: none; border-radius: 14px;
   box-shadow:
-    0 1px 3px rgba(0,0,0,.05),
-    0 5px 14px -6px rgba(0,0,0,.12),
-    0 12px 32px -12px rgba(0,0,0,.22);
-  padding: 14px 14px 12px; display: flex; flex-direction: column;
+    0 1px 2px rgba(0,0,0,.035),
+    0 8px 22px -7px rgba(0,0,0,.16),
+    0 24px 46px -22px rgba(0,0,0,.18);
+  padding: 13px 13px 11px; display: flex; flex-direction: column;
 }
 
 /* 顶部标题 */
-.pp-top { display: flex; align-items: center; margin-bottom: 12px; }
-.pp-title { font-size: 16px; font-weight: 600; letter-spacing: -.01em; color: var(--label); }
+.pp-top { display: flex; align-items: center; margin-bottom: 11px; }
+.pp-title { font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--label); }
 /* 待办 / 想法 模式切换 */
 .pp-mode {
   display: flex; gap: 2px;
-  background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 2px;
+  background: var(--panel); border: .5px solid var(--border); border-radius: 7px; padding: 2px;
 }
 .pm-btn {
-  font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: .04em; padding: 3px 11px;
-  border: none; border-radius: 6px; background: transparent;
+  font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0; padding: 3px 11px;
+  border: none; border-radius: 5px; background: transparent;
   color: var(--label-2); cursor: pointer; transition: background .12s, color .12s;
 }
 .pm-btn:hover { color: var(--label); }
-.pm-btn.active { background: var(--card); color: var(--label); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.pm-btn.active { background: color-mix(in srgb, var(--card) 90%, white); color: var(--label); box-shadow: 0 1px 3px rgba(0,0,0,.10); }
 .expand {
-  margin-left: auto; width: 28px; height: 28px; border: 1px solid var(--border);
-  background: var(--card); border-radius: 9px; cursor: pointer;
-  color: var(--label-2); font-size: 13px; transition: background .12s, color .12s;
+  margin-left: auto; width: 28px; height: 28px; border: none;
+  background: transparent; border-radius: 7px; cursor: pointer;
+  color: var(--label-2); transition: background .12s, color .12s;
 }
 .expand:hover { background: var(--hover); color: var(--label); }
+.expand svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round; }
 
 /* 添加区(大圆角输入) */
 .pp-task-add {
   display: flex; align-items: center; gap: 8px;
   background: transparent; border: none;
-  padding: 4px 2px; margin-bottom: 12px;
+  min-height: 28px; padding: 3px 2px; margin-bottom: 10px;
 }
 .status-tag {
   flex: none; font-family: inherit; font-size: 11px;
-  padding: 4px 9px; border: none; border-radius: 7px;
-  background: var(--tagc, var(--accent)); color: #fff; cursor: pointer;
-  white-space: nowrap; transition: filter .15s;
+  padding: 4px 8px; border: 1px solid color-mix(in srgb, var(--tagc, var(--accent)) 36%, transparent); border-radius: 6px;
+  background: color-mix(in srgb, var(--tagc, var(--accent)) 18%, transparent);
+  color: var(--tagc, var(--accent)); cursor: pointer;
+  white-space: nowrap; transition: background .15s;
 }
-.status-tag:hover { filter: brightness(1.05); }
+.status-tag:hover { background: color-mix(in srgb, var(--tagc, var(--accent)) 24%, transparent); }
 #ppTaskInput {
-  flex: 1; min-width: 0; font-family: inherit; font-size: 13px; color: var(--label);
+  flex: 1; min-width: 0; font-family: inherit; font-size: 12.5px; color: var(--label);
   background: transparent; border: none; padding: 2px;
 }
 #ppTaskInput:focus { outline: none; }
@@ -90,9 +93,9 @@ body {
 /* 想法:多行输入框,大一些 */
 .pp-idea-input {
   flex: 1; min-width: 0; box-sizing: border-box;
-  font-family: inherit; font-size: 13px; line-height: 1.5; color: var(--label);
-  background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
-  padding: 7px 9px; resize: none; outline: none; overflow: hidden; min-height: 46px;
+  font-family: inherit; font-size: 12.5px; line-height: 1.5; color: var(--label);
+  background: var(--panel); border: .5px solid var(--border); border-radius: 8px;
+  padding: 9px 10px; resize: none; outline: none; overflow: hidden; min-height: 58px;
   transition: border-color .15s;
 }
 .pp-idea-input:focus { border-color: var(--accent); }
@@ -104,17 +107,17 @@ body {
 .pp-task-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 .pp-empty { text-align: center; color: var(--label-3); font-size: 12px; padding: 28px 0; }
 
-.pp-group { margin-bottom: 10px; }
+.pp-group { margin-bottom: 8px; }
 .pp-group-head { display: flex; align-items: baseline; gap: 6px; padding: 0 2px 4px; }
 .ghead { font-size: 11px; font-weight: 600; }
 .gcnt { margin-left: auto; font-size: 10px; color: var(--label-3); font-variant-numeric: tabular-nums; }
-.pp-group-body { display: flex; flex-direction: column; gap: 2px; }
+.pp-group-body { display: flex; flex-direction: column; gap: 1px; }
 .pp-group.drop-hover .pp-group-body { box-shadow: 0 0 0 2px var(--accent); border-radius: 9px; }
 
 .pp-row {
   position: relative; display: flex; align-items: flex-start; gap: 9px;
-  background: transparent; border-radius: 7px;
-  padding: 4px 8px; cursor: grab; transition: background .12s;
+  background: transparent; border-radius: 6px;
+  padding: 4px 7px; cursor: grab; transition: background .12s;
 }
 .pp-row:hover { background: var(--hover); }
 .pp-row.dragging { opacity: .4; }
@@ -122,12 +125,12 @@ body {
 .pp-row.drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--accent); }
 
 .check {
-  flex: none; width: 16px; height: 16px; border-radius: 5px;
+  flex: none; width: 15px; height: 15px; border-radius: 4px;
   border: 1.5px solid var(--label-3); background: transparent; cursor: pointer;
   color: #fff; font-size: 9px; line-height: 1; margin-top: 1px;
   display: flex; align-items: center; justify-content: center; transition: all .15s;
 }
-.pp-text { flex: 1; min-width: 0; font-size: 12.5px; color: var(--label); line-height: 1.45; word-break: break-word; }
+.pp-text { flex: 1; min-width: 0; font-size: 12.5px; color: var(--label); line-height: 1.42; word-break: break-word; }
 .pp-text code { font-family: ui-monospace, "SF Mono", monospace; font-size: .9em; background: var(--hover); padding: 1px 5px; border-radius: 4px; }
 .pp-text a { color: var(--accent); text-decoration: none; }
 .pp-text del { opacity: .55; }
@@ -151,17 +154,36 @@ body {
 }
 
 /* ===== 想法行 ===== */
-.pp-row.idea { cursor: default; }
+.pp-row.idea {
+  cursor: default; display: grid; align-items: start;
+  grid-template-columns: 16px minmax(0, 1fr) 22px 20px;
+  grid-template-areas: "bulb text convert delete" ". time time time";
+  column-gap: 8px; row-gap: 3px;
+  padding-top: 7px; padding-bottom: 7px;
+}
 .pp-bulb {
-  flex: none; width: 15px; height: 15px; color: var(--label-3); margin-top: 2px;
+  grid-area: bulb;
+  flex: none; width: 16px; height: 16px; color: var(--label-3); margin-top: 2px;
   display: flex; align-items: center; justify-content: center;
 }
-.pp-bulb svg { width: 14px; height: 14px; display: block; }
+.pp-bulb svg { width: 15px; height: 15px; display: block; }
+.pp-row.idea .pp-text {
+  grid-area: text; font-size: 12.75px; line-height: 1.58;
+}
+.pp-row.idea .pp-text .md-line + .md-line { margin-top: 4px; }
+.pp-row.idea .pp-text .md-list { margin: 4px 0; padding-left: 1.35em; }
+.pp-row.idea .pp-text .md-list li { margin: 3px 0; }
 .pp-act {
   flex: none; font-family: inherit; font-size: 10px; padding: 2px 7px; margin-top: 1px;
   border: 1px solid var(--border); border-radius: 6px; background: var(--card);
   color: var(--label-2); cursor: pointer; opacity: 0;
   transition: opacity .15s, background .12s, color .12s;
 }
+.pp-icon-act {
+  grid-area: convert; width: 22px; height: 22px; padding: 0; display: flex; align-items: center; justify-content: center;
+}
+.pp-icon-act svg { width: 15px; height: 15px; display: block; }
 .pp-row:hover .pp-act { opacity: 1; }
 .pp-act:hover { background: var(--hover); color: var(--label); }
+.pp-row.idea .pp-time { grid-area: time; margin: 0; font-size: 10px; }
+.pp-row.idea .pp-del { grid-area: delete; margin-top: 1px; }

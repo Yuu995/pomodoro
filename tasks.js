@@ -5,9 +5,9 @@ const TASKS_KEY = 'tomato_tasks';
 
 // 三档状态(按紧迫从高到低),用于循环切换
 const PRIORITIES = [
-  { key: 'high', label: '今天做完', color: '#43A06A' }, // 绿
-  { key: 'mid',  label: '这周做完', color: '#5887D8' }, // 蓝
-  { key: 'low',  label: '要做的',   color: '#98989D' }  // 灰
+  { key: 'high', label: '今天做完', color: '#4D8B66' }, // 清晰绿
+  { key: 'mid',  label: '这周做完', color: '#6287B0' }, // 中明度蓝
+  { key: 'low',  label: '要做的',   color: '#9A9EA5' }  // 浅中性灰
 ];
 const PRIORITY_ORDER = { high: 0, mid: 1, low: 2 };
 const PRIORITY_MAP = Object.fromEntries(PRIORITIES.map(p => [p.key, p]));

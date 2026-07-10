@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ToDo</title>
+  <title>TODO</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="on-tasks">
@@ -46,13 +46,19 @@
     <!-- 右侧内容(纯白) -->
     <main class="content">
       <header class="content-bar">
-        <button class="side-toggle" id="sideToggle" title="收起任务栏" aria-label="收起或展开任务栏">«</button>
+        <button class="side-toggle" id="sideToggle" title="收起任务栏" aria-label="收起或展开任务栏">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="3"/><path d="M7 3v14"/></svg>
+        </button>
         <span class="bar-grow"></span>
         <div class="view-toggle" id="viewToggle">
-          <button class="vt-btn active" data-mode="list" title="列表视图">≣</button>
-          <button class="vt-btn" data-mode="calendar" title="日历视图">▦</button>
+          <button class="vt-btn active" data-mode="list" title="列表视图" aria-label="列表视图">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5h10M7 10h10M7 15h10"/><circle cx="3.5" cy="5" r=".7"/><circle cx="3.5" cy="10" r=".7"/><circle cx="3.5" cy="15" r=".7"/></svg>
+          </button>
+          <button class="vt-btn" data-mode="calendar" title="日历视图" aria-label="日历视图">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="14" rx="3"/><path d="M2.5 7.5h15M6 2.5v3M14 2.5v3"/></svg>
+          </button>
         </div>
-        <button class="theme-btn" id="themeBtn" title="切换主题:跟随系统 / 浅色 / 深色" aria-label="主题">◐</button>
+        <button class="theme-btn" id="themeBtn" title="切换主题:跟随系统 / 浅色 / 深色" aria-label="主题"></button>
       </header>
       <div class="content-body">
         <h1 class="content-title" id="contentTitle">全部</h1>

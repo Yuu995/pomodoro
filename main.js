@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, Tray, nativeImage, Menu, screen, nativeTheme } = require('electron');
+const { execFile } = require('child_process');
 const path = require('path');
 
 // 锁定数据目录到原路径,改名(productName/name)后历史任务数据不丢
@@ -10,6 +11,7 @@ let tray = null;
 let hideTimer = null;
 let tomatoIcon = null;
 let todoIcon = null;
+let showRequest = 0;
 
 // —— 主窗口 ——
 function createWindow() {
@@ -23,7 +25,7 @@ function createWindow() {
     title: 'TODO',
     titleBarStyle: 'hiddenInset',   // 隐藏标题栏,红绿灯悬浮,内容延伸到顶部
     trafficLightPosition: { x: 14, y: 18 },
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1b1b1d' : '#ffffff', // AI Studio 纯白底
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1f2023' : '#fbfbfc',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -47,11 +49,12 @@ function showMainWindow() {
   }
 }
 
-// —— 悬浮窗(状态栏快捷计时)——
+// —— 状态栏快捷面板 ——
 function createPopover() {
   popover = new BrowserWindow({
-    width: 384,
-    height: 514,
+    width: 436,
+    height: 580,
+    type: process.platform === 'darwin' ? 'panel' : undefined,
     show: false,
     frame: false,
     transparent: true,
@@ -66,9 +69,15 @@ function createPopover() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      backgroundThrottling: false // 失焦隐藏时仍每秒计时,状态栏不停更新
+      backgroundThrottling: false // 隐藏时仍同步任务数量与数据
     }
   });
+  if (process.platform === 'darwin') {
+    // panel 使用非激活式原生浮层，并允许出现在其他应用的全屏 Space 上。
+    popover.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    popover.setAlwaysOnTop(true, 'pop-up-menu');
+    popover.setHiddenInMissionControl(true);
+  }
   popover.loadFile('popup.html');
   // 不再「失焦即收起」,以便与主窗口并存;收起改由光标离开判定(scheduleHide)
 }
@@ -78,7 +87,10 @@ function positionPopover() {
   if (!popover || !tray) return;
   const tb = tray.getBounds();
   const wb = popover.getBounds();
-  const x = Math.round(tb.x + tb.width / 2 - wb.width / 2);
+  const display = screen.getDisplayNearestPoint({ x: tb.x, y: tb.y });
+  const minX = display.workArea.x + 6;
+  const maxX = display.workArea.x + display.workArea.width - wb.width - 6;
+  const x = Math.max(minX, Math.min(maxX, Math.round(tb.x + tb.width / 2 - wb.width / 2)));
   const y = Math.round(tb.y + tb.height + 1); // 紧贴状态栏下沿
   popover.setPosition(x, y, false);
 }
@@ -87,20 +99,45 @@ function pointIn(p, b) {
   return p.x >= b.x && p.x <= b.x + b.width && p.y >= b.y && p.y <= b.y + b.height;
 }
 
-// 显示悬浮窗(不抢当前应用焦点)
-function showPopover() {
+function getSpaceHelperPath() {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, 'front-window-state')
+    : path.join(__dirname, 'helpers', 'front-window-state');
+}
+
+function getFrontWindowState() {
+  if (process.platform !== 'darwin') return Promise.resolve('normal');
+  return new Promise((resolve) => {
+    execFile(getSpaceHelperPath(), [], { timeout: 500 }, (error, stdout) => {
+      if (error) return resolve('unknown');
+      const state = String(stdout || '').trim();
+      resolve(state === 'fullscreen' || state === 'normal' ? state : 'unknown');
+    });
+  });
+}
+
+// 普通桌面激活输入框；独立全屏 Space 只显示面板，不抢焦点也不切换桌面。
+async function showPopover(requireTrayHover = true) {
   if (!popover) return;
   clearTimeout(hideTimer);
-  if (!popover.isVisible()) {
-    positionPopover();
-    popover.show(); // 获焦,hover 弹出即可直接输入
-    popover.webContents.send('popover-shown');
-  }
+  if (popover.isVisible()) return;
+
+  const request = ++showRequest;
+  positionPopover();
+  const frontWindowState = await getFrontWindowState();
+  if (request !== showRequest || !popover || popover.isVisible()) return;
+  if (requireTrayHover && (!tray || !pointIn(screen.getCursorScreenPoint(), tray.getBounds()))) return;
+
+  const focusInput = frontWindowState === 'normal';
+  if (focusInput) popover.show();
+  else popover.showInactive();
+  popover.webContents.send('popover-shown', { focusInput });
 }
 
 // 延迟隐藏:仅当光标既不在图标上、也不在悬浮窗上时才收起(留出移动到悬浮窗的路径)
 function scheduleHide() {
   clearTimeout(hideTimer);
+  showRequest++;
   hideTimer = setTimeout(() => {
     if (!popover || !popover.isVisible()) return;
     const p = screen.getCursorScreenPoint();
@@ -113,11 +150,11 @@ function scheduleHide() {
 function togglePopover() {
   if (!popover) return;
   if (popover.isVisible()) popover.hide();
-  else showPopover();
+  else showPopover(false);
 }
 
 // —— 状态栏图标 ——
-// 根据当前 Tab 切换图标:'todo' 显示待办图标+未完成数,'pomodoro' 显示番茄图标+倒计时
+// 根据当前模块更新状态栏图标与未完成数量。
 function setTrayMode(mode, text) {
   if (!tray) return;
   tray.setImage(mode === 'pomodoro' ? tomatoIcon : todoIcon);
@@ -155,7 +192,7 @@ ipcMain.on('popover-hover-leave', scheduleHide);                  // 鼠标离�
 ipcMain.on('set-theme', (_e, mode) => {                           // 同步原生外观 + 窗口底色
   if (['system', 'light', 'dark'].includes(mode)) {
     nativeTheme.themeSource = mode;
-    if (mainWindow) mainWindow.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#1b1b1d' : '#ffffff');
+    if (mainWindow) mainWindow.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#1f2023' : '#fbfbfc');
   }
 });
 

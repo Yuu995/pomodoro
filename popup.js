@@ -5,6 +5,7 @@ const ppTaskList = $('ppTaskList');
 const ppStatusTag = $('ppStatusTag');
 const ppIdeaInput = $('ppIdeaInput');
 let ppPriority = 'high';
+let allowAutoFocus = false;
 
 // 状态栏图标旁显示未完成数量
 function syncTray() {
@@ -33,17 +34,17 @@ function applyPpMode() {
   ppIdeaInput.hidden = !isIdea;
   renderPp();
 }
-function switchPpMode(mode) {
+function switchPpMode(mode, shouldFocus = false) {
   const focusEl = () => (mode === 'idea' ? ppIdeaInput : ppTaskInput).focus();
-  if (mode === ppMode) { focusEl(); return; }
+  if (mode === ppMode) { if (shouldFocus) focusEl(); return; }
   ppMode = mode;
   localStorage.setItem('tomato_popup_mode', ppMode);
   applyPpMode();
-  focusEl();
+  if (shouldFocus) focusEl();
 }
 document.querySelectorAll('.pm-btn').forEach(b => {
-  b.addEventListener('click', () => switchPpMode(b.dataset.mode));
-  b.addEventListener('mouseenter', () => switchPpMode(b.dataset.mode)); // hover 即切换
+  b.addEventListener('click', () => switchPpMode(b.dataset.mode, true));
+  b.addEventListener('mouseenter', () => switchPpMode(b.dataset.mode, allowAutoFocus)); // hover 即切换
 });
 function renderPp() { ppMode === 'idea' ? renderPpIdeas() : renderPpTasks(); }
 
@@ -77,9 +78,13 @@ ppTaskInput.addEventListener('keydown', (e) => {
 
 $('openMain').addEventListener('click', () => { if (window.tomato) window.tomato.openMain(); });
 
-// hover 弹出时自动聚焦输入框
+// hover 弹出时按主进程判断决定是否聚焦:其他应用内打开时不抢当前输入焦点
 if (window.tomato && window.tomato.onShown) {
-  window.tomato.onShown(() => setTimeout(() => (ppMode === 'idea' ? ppIdeaInput : ppTaskInput).focus(), 0));
+  window.tomato.onShown(({ focusInput }) => {
+    allowAutoFocus = Boolean(focusInput);
+    if (!focusInput) return;
+    setTimeout(() => (ppMode === 'idea' ? ppIdeaInput : ppTaskInput).focus(), 0);
+  });
 }
 if (window.tomato && window.tomato.hoverEnter) {
   document.addEventListener('mouseenter', () => window.tomato.hoverEnter());
@@ -206,7 +211,9 @@ function ppIdeaRow(idea) {
   span.addEventListener('dblclick', () => beginTaskEdit(row, span, idea, renderPp, updateIdeaText));
   const time = document.createElement('span'); time.className = 'pp-time'; time.textContent = ppIdeaTime(idea.createdAt);
   const conv = document.createElement('button');
-  conv.className = 'pp-act'; conv.textContent = '转待办'; conv.title = '转成「要做的」待办';
+  conv.className = 'pp-act pp-icon-act'; conv.title = '转成「要做的」待办';
+  conv.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4.5" y="4.5" width="11" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 10.5l3.1 3.1L15 6.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  conv.setAttribute('aria-label', '转成待办');
   conv.addEventListener('click', () => { ideaToTask(idea.id, 'low'); renderPp(); });
   const del = document.createElement('button');
   del.className = 'pp-del'; del.textContent = '×'; del.title = '移入回收站';

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>快捷待办</title>
+  <title>TODO 快捷面板</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body class="on-tasks">
@@ -14,7 +14,9 @@
           <button class="pm-btn active" data-mode="todo">TODO</button>
           <button class="pm-btn" data-mode="idea">IDEA</button>
         </div>
-        <button class="expand" id="openMain" title="打开主窗口" aria-label="打开主窗口">↗</button>
+        <button class="expand" id="openMain" title="打开主窗口" aria-label="打开主窗口">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4H4.5A1.5 1.5 0 0 0 3 5.5v10A1.5 1.5 0 0 0 4.5 17h10a1.5 1.5 0 0 0 1.5-1.5V12"/><path d="M11 3h6v6M17 3l-8 8"/></svg>
+        </button>
       </nav>
       <div class="pp-task-add">
         <button class="status-tag" id="ppStatusTag" data-prio="high">今天做完</button>

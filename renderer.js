@@ -7,7 +7,7 @@ const statusTag = $('statusTag');
 const ideaInput = $('ideaInput');
 
 let addPriority = 'high';   // 新任务默认「今天做完」
-let currentFilter = 'all';  // all | done | trash
+let currentFilter = 'all';  // all | idea | done | trash
 let currentView = 'list';   // list | calendar
 let calCursor = null;       // 日历当前月 {y, m}
 
@@ -41,7 +41,7 @@ function syncAddBar() {
   taskInput.hidden = isIdea;
   ideaInput.hidden = !isIdea;
 }
-function ideaAutosize() { ideaInput.style.height = 'auto'; ideaInput.style.height = Math.min(ideaInput.scrollHeight, 160) + 'px'; }
+function ideaAutosize() { ideaInput.style.height = 'auto'; ideaInput.style.height = Math.min(ideaInput.scrollHeight, 260) + 'px'; }
 ideaInput.addEventListener('input', ideaAutosize);
 ideaInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
@@ -68,10 +68,10 @@ document.querySelectorAll('.side-item').forEach(item => {
   item.addEventListener('click', () => {
     currentFilter = item.dataset.filter;
     document.querySelectorAll('.side-item').forEach(s => s.classList.toggle('active', s === item));
-    $('taskAdd').style.display = (currentFilter === 'all' || currentFilter === 'idea') ? '' : 'none';
-    $('viewToggle').style.display = currentFilter === 'idea' ? 'none' : ''; // 日历只属于待办
+    // 日历只服务全部待办；切到其他分类时回到列表，避免内容与侧栏状态不一致。
+    if (currentFilter !== 'all') currentView = 'list';
     syncAddBar();
-    renderTasks();
+    applyCurrentView();
   });
 });
 
@@ -81,7 +81,11 @@ function applySidebar() {
   const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
   document.body.classList.toggle('sidebar-collapsed', collapsed);
   const btn = $('sideToggle');
-  if (btn) { btn.textContent = collapsed ? '»' : '«'; btn.title = collapsed ? '展开任务栏' : '收起任务栏'; }
+  if (btn) {
+    btn.classList.toggle('active', collapsed);
+    btn.title = collapsed ? '展开任务栏' : '收起任务栏';
+    btn.setAttribute('aria-expanded', String(!collapsed));
+  }
 }
 $('sideToggle').addEventListener('click', () => {
   const collapsed = localStorage.getItem(SIDEBAR_KEY) === '1';
@@ -97,12 +101,17 @@ if (!document.hasFocus()) document.body.classList.add('win-inactive');
 
 // —— 主题:跟随系统 → 浅色 → 深色 ——
 const THEMES = ['system', 'light', 'dark'];
-const THEME_ICON = { system: '◐', light: '☀', dark: '☾' };
+const THEME_ICON = {
+  system: '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M10 3.5a6.5 6.5 0 0 1 0 13z" fill="currentColor" stroke="none"/></svg>',
+  light: '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.2"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.35 4.35l1.4 1.4M14.25 14.25l1.4 1.4M15.65 4.35l-1.4 1.4M5.75 14.25l-1.4 1.4"/></svg>',
+  dark: '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.2 12.8A6.8 6.8 0 0 1 7.2 3.8 6.8 6.8 0 1 0 16.2 12.8z"/></svg>'
+};
 let themeMode = localStorage.getItem('tomato_theme') || 'system';
 function applyTheme() {
   if (themeMode === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme', themeMode);
-  const b = $('themeBtn'); if (b) b.textContent = THEME_ICON[themeMode];
+  const b = $('themeBtn'); if (b) b.innerHTML = THEME_ICON[themeMode];
+  if (window.tomato && window.tomato.setTheme) window.tomato.setTheme(themeMode);
 }
 $('themeBtn').addEventListener('click', () => {
   themeMode = THEMES[(THEMES.indexOf(themeMode) + 1) % THEMES.length];
@@ -112,16 +121,21 @@ $('themeBtn').addEventListener('click', () => {
 applyTheme();
 
 // —— 列表 / 日历 视图切换 ——
+function applyCurrentView() {
+  const isCal = currentView === 'calendar' && currentFilter === 'all';
+  if (!isCal) currentView = 'list';
+  document.querySelectorAll('.vt-btn').forEach(x => x.classList.toggle('active', x.dataset.mode === currentView));
+  $('viewToggle').hidden = currentFilter !== 'all';
+  $('calendar').hidden = !isCal;
+  $('taskList').hidden = isCal;
+  $('taskAdd').style.display = !isCal && (currentFilter === 'all' || currentFilter === 'idea') ? '' : 'none';
+  isCal ? renderCalendar() : renderTasks();
+}
+
 document.querySelectorAll('.vt-btn').forEach(b => {
   b.addEventListener('click', () => {
     currentView = b.dataset.mode;
-    document.querySelectorAll('.vt-btn').forEach(x => x.classList.toggle('active', x === b));
-    const isCal = currentView === 'calendar';
-    $('calendar').hidden = !isCal;
-    $('taskList').hidden = isCal;
-    document.querySelector('.sidebar').style.display = isCal ? 'none' : '';
-    $('taskAdd').style.display = (isCal || currentFilter !== 'all') ? 'none' : '';
-    isCal ? renderCalendar() : renderTasks();
+    applyCurrentView();
   });
 });
 
@@ -261,7 +275,10 @@ function ideaRow(idea) {
   const time = document.createElement('span');
   time.className = 'task-time'; time.textContent = formatClock(idea.createdAt);
   const conv = document.createElement('button');
-  conv.className = 'row-act ghost-act'; conv.textContent = '转待办'; conv.title = '转成「要做的」待办';
+  conv.className = 'icon-act ghost-act convert-act';
+  conv.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4.5" y="4.5" width="11" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 10.5l3.1 3.1L15 6.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  conv.title = '转成「要做的」待办';
+  conv.setAttribute('aria-label', '转成待办');
   conv.addEventListener('click', () => { ideaToTask(idea.id, 'low'); renderTasks(); });
   const del = document.createElement('button');
   del.className = 'task-del'; del.textContent = '×'; del.title = '移入回收站';
@@ -458,4 +475,4 @@ function renderCalendar() {
 
 // ===== 初始化 =====
 syncAddBar();
-renderTasks();
+applyCurrentView();
